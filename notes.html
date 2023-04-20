@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nodejs Expressjs MongoDB Notes</title>
+    <style type="text/css">
+        * {
+            box-sizing: border-box;
+            margin: 0;
+        }
+
+        main {
+            width: 900px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <pre>
+        <h2> express() </h2>
+
+        Content-Type: "application/json" => app.use(express.json());
+            receives request's payload in json format into request.body
+
+        Content-Type: "application/octet-stream" => app.use(express.raw());
+            receives request's payload in binary stream format into request.body at once
+
+        Content-Type: "text/plain" => app.use(express.text());
+            receives request's payload in plain text format into request.body 
+
+        Content-Type: "x-www-form-urlencoded" => app.use(express.urlencoded());
+            receives request's payload in url encoded format and decodes everything into request.body 
+
+
+        1. req.body
+        2. res.send('hello world!');
+
+            res.send, req.body
+            unlike raw node.js request body is collected in body property of request object whereas
+            in raw node.js request body is received in the server as a buffer stream
+            we had to listen to req.on('data') event and
+
+        3. 
+        app.use(express.static(`${__dirname}/public/`));
+            to link static folder to the application, so that we can access static assets by url from client side, 
+            in this case we don't need to specify the 'public'/static directory name in the url
+            app.use(express.static(`${__dirname}/public/`, {
+            index: name_of_default_file_in_static_dir_with_extension
+            }));
+
+        4. 
+        const Router = express.Router({
+            caseSensitive: true
+        });
+        app.use(Router);
+
+            - we can create different router object and bind them to the application by app.use(routerName); 
+            - express.Router() returns a 'Router' object which is case insensitive by default but we can specify
+                options in the construction functions' argument object.
+
+
+       <h2>Application  object</h2>
+        1. 
+        * application object's properties
+        * app.locals
+        stores all local variables of the application in the 'locals' property of the application object
+            const app = express();
+            app.locals.title = "My App"; 
+
+            const handle = (req, res) => {
+            res.send('welcome to home page !');
+                console.log(req.app.locals.title);
+            };
+            we can access locals property of the application object anywhere in the applicaiton using 
+            'req.app.locals'  
+
+        * app.mountpath
+            in nodejs, we can build multiple applications object by calling express() function multiple times 
+            and mount one application to another using app.use() method, providing a 'mountpath' and 
+            'sub-application's object reference 
+            
+                const app = express();
+                const admin = express();
+                app.use('/admin', admin);
+
+
+                admin.get('/', (req, res)=>{
+                    console.log("welcome to the admin application's homepage");
+                });
+
+                app.get('/', (req, res)=>{
+                    console.log("welcome to the main application's homepage");
+                    console.log(`admin application is mounted to the main 
+                        application in path, ${admin.mountpath}`);
+                });
+
+        * app object's events 
+            'mount' event - when a child app is mounted onto a parent app a 'mount' event is triggered and 
+            it could be captured by the child app using, 
+            
+            admin.on('mount', (parent)=>{
+                console.log(`admin was mounted to ${parent.locals.title}`);
+            });
+
+            app.use('/admin', admin);
+
+        * app object's methods 
+            1. app.all('/faq', (req, res)=>{
+                    res.send(`accepts requests of all methods e.g., GET, POST, PUT, DELETE`);
+                });
+
+            set's up a path that accepts requests in all available methods in http/s protocol 
+            
+            2.  app.delete('/posts', (req, res)=>{
+                    console.log('accepts requests only in DELETE method on route "/posts"');
+                });
+
+            3. app.disable('trust proxy');
+                disables a setting of the app - which requires a name from the app setting's table 
+
+            4. app.disabled('trust proxy') 
+                => returns true
+
+            5. app.enable('case sensitive routing'); 
+                => enables case sensitive routing e.g., /about !== /About
+
+            6. app.enabled('case sensitive routing');
+                => returns true
+
+            7. app.get("property name")
+                => returns property value of "property name"
+                also used to set request handler function to a specific route for the GET method 
+
+            8. app.set("property", "value");
+                a. is used to set a property with value to the application object
+
+                b. to set tempalte engine and default template file location of the app
+                    app.set('views', path.join(__dirname, 'views'));
+                        sets root file location for template files
+                        if it is omitted then default template file location is 
+                        process.cwd() +/views
+
+                    app.set('view engine', 'ejs');
+                        sets template engine 
+
+
+                    res.render('/path/to/template.ext');
+
+
+            9.  app.listen(8000, ()=> {
+                    console.log("listening on port 8000");
+                });
+                is used to listen to a specific port for incoming request
+                
+            10. app.param("parameterName", (req, res, next, parameter)=>{});
+
+                'middleware' injector - interceptor
+
+                Router.param('id', (req, res, next, id)=>{
+                    console.log(`I am called earler with id: ${id}`);
+                    const user = {
+                        userId: +id, 
+                        name: 'Bangladesh',
+                    };
+                    req.user = user;
+                    next(); 
+                });
+
+                Router.get('/users/:id', (req, res)=>{
+                    console.log(id);
+                });
+
+            11. app.path(); 
+                returns individual canonical path of an application in a express.js app 
+
+            12. app.route('/path').get().post().put().delete();
+                to group/gather HTTP requests methods for a single route
+                
+                app.route('/about/mission')
+                    .get((req, res)=>{
+
+                    }).post((req, res)=>{
+
+                    }).put((req, res)=>{
+
+                    }).delete((req, res)=>{
+
+                    }); 
+
+            13. app.engine();
+                    is used to set a template engine extension that will render tempaltes written in 
+                    template-engine-syntax to plain html webpage
+
+                    app.engine('html', require('ejs').renderFile);
+                        registers 'renderFile' method as callback that will be responsible for rendering 
+                        templates files which extension is '.html'
+
+                    app.get('/about', (req, res)=>{
+                        res.render('/about/index.html');
+                            takes '/about/index.html' as input and processes it through the 
+                            'renderFile' callback ans sends back the resultant html as response
+                    }); 
+
+        <h2>Request object </h2>
+
+            'req' - express request object which extends core node.js request object
+            client makes a http request to a server
+            with headers and payload 
+            
+            <h3> properties </h3>
+            1. req.baseUrl => at which route/path the express app was mounted
+
+            2. req.originalUrl => same as req.url but 
+                in case of 'sub-app' 'req.url' gets modified to sub-app's url, discards the baseUrl part
+                
+            3. req.path => request path only excluding query parameters/string
+
+            4. req.hostname => localhost => req.Headers.Host
+
+            5. req.ip => ip address => ::1
+
+            6. req.method => request method => returns request method in uppercase
+
+            7. req.protocol => http / https 
+
+            8. req.params => returns named properties of a route in a JavaScript object and property 
+                values are always will be in string
+
+            9. req.query => query parameters => returns query parameters in a JavaScript object and 
+                property values are always will be in string
+
+            10. req.body => with post and put request we attach some informations / payload to it, to receive 
+                    it properly we need to set request type in the server, e.g., 'app.use(express.json());' 
+                    and also specify 'Content-Type' in the request header from the client side, 
+                    e.g., 'Content-Type: "application/json"'
+                    always returns a 'JavaScript object '/ 'string' / 'buffer string' or undefined 
+                    if parser is not set properly
+
+            11. req.cookies => if client sends cookies but to parse cookies in the express server we need to 
+                    install 'cookie-parser' package and specify the cookie parser in the server. 
+                    const cookieParser = require('cookie-parser');
+                    app.use(cookieParser());
+
+                    
+            12. req.signedCookies => if sent cookes are signed 
+
+            13. req.secure => returns true if request is sent over https protocol or false otherwise
+
+            14. req.app => returns the app object on which the request was received
+
+            15. req.route => returns all info of a route on which the request 'req' object was attached to
+
+            <h3>methods</h3>
+            1. req.accepts('type'); => returns false or 'type' if client accepts response type or not 
+            2. req.get('header-property-name') => returns header's value 
+            
+        <h2>Response object </h2>
+            * server sets some headers in http response 
+            * 'res' - object
+
+            <h3>propreties</h3>
+                1. res.app => application object on which the req and res was generated and attached to 
+
+                2. res.headersSent => returns true or false depending on response was already sent 
+                    or not from the server 
+                
+                3. res.locals => response's local variable; only applicable to 'view'
+                    res.render('path/to/template.ext', {
+                        id: 1, 
+                        name: 'Bangladesh'
+                    });
+                    the object that we are sending to the render function will be available in the template 
+                    as properties,  id, name
+                    and that object will be stored in res.locals property  
+                
+            <h3>methods</h3>
+                1. res.cooke('name', 'value');
+                    => sets cookies (name, value) in the response
+                    => res.cookie("token", jwt_token_value, {
+                        // cookie options
+                    });
+
+                2. res.clearCookie('name'); => clear cookie from the client upon response receiving 
+                
+                3. res.end(); => disconnects client connection; ends the response 
+                4. res.send("some data") 
+                    => sends http response and end() the response; usually used to send data in the response
+                
+                5. res.json(JavaScript-Object) => stringifies the JavaScript-Object into json string, 
+                    => sets response header 'Content-Type' to 'application/json' sends that
+                
+                6. res.status(200) 
+                    => sets http response status to a specific http response status value e.g., 200
+                        it does not ends the response so 
+                        res.status(200); 
+                        res.end();
+
+                7. res.sendStatus() 
+                    => sets and sends i.e., 'res.send()' a http response status value.
+
+                8. res.render('/path/to/template') 
+                    =>  renders a view and sends it
+                
+                9. res.format() => http content-type negotiator 
+                    app.get('/notice', (req, res) => {
+                        res.format({
+                        'text/plain': () => {
+                            res.send('notice page');
+                        },
+                        'text/html': () => {
+                            res.render('about/mission/home.ejs', {
+                            id: 1,
+                            name: Bangladesh,
+                            });
+                        },
+                        'application/json': () => {
+                            res.json({
+                            message: 'notice page',
+                            });
+                        },
+                        default: () => {
+                            res.status(406);
+                            res.send('Not acceptable');
+                        },
+                        });
+                    });
+
+                10. res.location() => sets the HTTP 'Location' response-header to which client should redirect but the 
+                    server itself does not redirect the client to that 'Location'
+
+                11. res.redirect('/test') => redirects client to a path 
+
+                12. res.get("header-property-name") => returns response header propertie's value
+                13. res.set("header-property-name", 'value');
+
+        <h2> Middleware </h2>
+            * middleware can call next() to pass request to next middleware or call res.send() to send response to the 
+                client.
+
+            * middleware can throw error, in case of an error the request does not go through next Middleware instead it 
+                goes to error handler middleware.
+            
+            * middleware can modify request or response object 
+
+            * types of middleware 
+                1. application level middleware,
+                    const loggerMiddleware = (req, res, next)=>{
+                        console.log(`${new Date(Date.now()).toLocaleString()} - ${req.protocol}://${req.ip}${req.originalUrl}`);
+                        next('test');
+                    };
+                    app.use(loggerMiddleware);
+
+                2. router level middleware,
+                        const adminRouter = express.Router({
+                            caseSensitive: true
+                        });
+                    app.use('/admin', adminRouter);
+                    adminRouter.use(loggerMiddleware);
+
+                3. error handling middleware 
+                
+                    // 4 parameters signifies error handling middleware in express
+                    const errorHandlerMiddleware = (error, req, res, next) => {
+                        console.log(error.message);
+                        res.status(500);
+                        res.send('There was a server side error');
+                    };
+                    Router.use(errorHandlerMiddleware);
+
+                4. built in middlewares 
+                    e.g., express.json(), express.static();
+
+                    app.use(express.json());
+                
+
+                5. third party middleware
+                    third party packages provides us with middleware which we can hook to the application
+
+                    const cookeParser = require("cookie-parser"); 
+                    app.use(cookieParser())
+                    cookieParser(); => returns a middleware function
+   
+            * in case of success we must use next() with no value passed to it or else it will be 
+                counted as 
+                
+            * configurable middleware 
+                write a higher order function that returns a closure which accepts req, res, next 
+
+        <h2>Router Object</h2>
+            * express app object has a builtin router object that handles app.get, app.post, app.delete etc. routes 
+            
+            * you can create a new router object by calling 
+                const adminRouter = express.Router()
+
+            * you can add a router to the app object by, 
+                app.use('/admin', adminRouter); 
+                => all request to '/admin' will be routed to 'adminRouter'
+
+            * you can add a middleware to a router by using, <b> Router.all() </b>
+                const log = (req, res, next) => {
+                    console.log(`I am being called at, ${req.originalUrl}`);
+                    next();
+                };
+                adminRouter.all("*", middleware);
+
+            * you can also add a middleware for a router parameter by using, <b> Router.param() </b>
+                e.g, 
+                    const publicRouter = express.Router();
+                    publicRouter.param('user', (req, res, next, userId)=>{
+                        req.userName = userId && typeof userId === 'string' && userId === '1' ? 'Admin' : 'Anonymous';
+                        next();
+                    });
+                     
+                    publicRouter.get('/:user', (req, res)=>{
+                        res.send(`Hello ${req.userName}`);
+                    });
+                    
+                => any route of publicRouter that has "user" parameter in it will receive the req after being processed 
+                    through the 'publicRouter.param()' middleware 
+
+                => if multiple url's with same router parameter of a single router matches router.param(), in that case 
+                    router.param() is only called once 
+            
+            * you can also group routes together by 
+                Router.route('/path').get().post().put().delete()
+
+            * Router.use();
+                => to add middleware, other routers etc.
+            
+            * Route/path with patters or regex is also available 
+                to use regex start and end the path-pattern with forward slash 
+                
+        <h2>Error handling</h2>
+            * error handling is different for synchronous and asynchronous code 
+            * synchronous
+                express framework by default handles errors in synchronous code, 
+                renders an html error response with stack trace in development environment
+
+                1. default error handling middleware as last middleware which takes 4 parameters i.e., err, req, res, next
+                    to override default error handling middleware 
+                    => attach an error handler middleware at the very last of the middleware chain 
+
+                2. 404 not found error handler 
+                    attach a middleware at the end of all routes, check if requested path is available in the route list 
+                    and send appropriate response with error message and status code 
+                    or you can just pass over to next middleware with an error message 
+                    next("Requested URL was not found !");
+
+                3. as soon as 'res.write()' is called - starts streaming response to the client 
+                    error handling during response streaming 
+
+                    app.get('/about', (req, res, next)=>{
+                        for(let i = 0; i <=5; i++){
+                            if(i == 5){
+                                next("An error occured");
+                            }else{
+                                res.write('a');
+                            }
+                        }
+                        res.end();
+                    });
+
+                    app.use((err, req, res, next) => {
+                        if (res.headersSent) {
+                          next("There was a problem !");
+                          
+                        } else {
+                          if (err.message) res.status(500).send(err.message);
+                          else res.status(500).send('there was an error !');
+                        }
+                      });
+
+            * asynchronous
+                app.get('/', (req, res, next) => {
+                    fs.readFile('file.txt', (error, data)=>{
+                        if(error){
+                            next(error);
+                        }else{
+                            res.send(data);
+                        }
+                    });
+                });
+
+                Note: 
+                    1. next(err); will always call an error handler not the immediate middleware even if it exists
+                    2. use try catch to catch errors and call next(error)
+                    3. we can chain middlewares by adding them to an array of middlewares
+                    
+        <h2>File uploading</h2>
+            const upload = multer({
+                dest: "./uploads/"
+            });
+        
+            1. single file upload
+                app.post('/', upload.single('avatar'), (req, res, next) => {
+                    res.send('post request received');
+                });
+            
+            2. multiple file upload at once
+                app.post('/', upload.array('avatar', 10), (req, res, next) => {
+                    res.send('post request received');
+                });
+            
+            3. multiple file upload using multiple input fields
+                app.post('/', upload.fields([
+                    {name: 'avatar', maxCount: 10},
+                    { name: 'gallery', maxCount: 4 } 
+                ]), (req, res, next) => {
+                    res.send('post request received');
+                });
+
+            * you can also use multer to parse multipart/form-data into express's req.body by 
+                upload.none(),
+
+            4. file upload validation 
+                const upload = multer({
+                    dest: "./uploads/", 
+                    limits: {
+                        fileSize: 1000000 // 1 megabyte
+                    }
+                });
+
+            5. file upload with multiple input fields and validation 
+                    const UPLOADS_FOLDER = './uploads/';
+
+                    const storage = multer.diskStorage({
+                        destination: (req, file, callback)=>{
+                            callback(null, UPLOADS_FOLDER);
+                        }, 
+                        filename: (req, file, callback)=>{
+                            // file name.ext => file name
+                            const fileExt = path.extname(file.originalname);
+                            const fileName = file.originalname.replace(fileExt, "").toLowerCase().split(" ").join("_") + `_${Date.now()}`;
+                            callback(null, fileName + fileExt);
+                        }
+                    });
+
+                    const upload = multer({
+                        storage: storage,
+                        limits: {
+                            fileSize: 1000000,
+                        },
+
+                        fileFilter: (req, file, callback) => {
+                            if (file.fieldname === 'avatar') {
+                            if (file.mimetype === 'image/jpg' || file.mimetype === 'image/png' || file.mimetype === 'image/jpeg') {
+                                callback(null, true);
+                            } else {
+                                callback(new Error('Only .jpg, .jpeg, .png files are allowed'), false);
+                            }
+                            } else if (file.fieldname === 'doc') {
+                            if (file.mimetype === 'application/pdf') {
+                                callback(null, true);
+                            } else {
+                                callback(new Error('Only .pdf files are allowed'), false);
+                            }
+                            } else {
+                            callback(new Error(`${file.fieldname} is not allowed to be uploaded`), false);
+                            }
+                        },
+                    });
+            
+
+                    app.post('/', upload.fields([
+                            {name: 'avatar', maxCount: 1},
+                            {name: 'doc', maxCount: 1}
+                        ]), (req, res, next) => {
+                        res.send(req.files);                    
+                    });
+
+
+                    app.use((err, req, res, next) => {
+                        if (res.headersSent) {
+                          next('There was a problem !');
+                        } else {
+                          if (err.message) {
+                            if (err instanceof multer.MulterError) {
+                              res.status(500).send("there was an upload error ");
+                            } else {
+                              res.status(500).send(err.message);
+                            }
+                          } else res.status(500).send('there was an error !');
+                        }
+                      });
+
+        <h2>JSON Web Token - JWT</h2>
+            * user authorization technique 
+            
+            * was created to fascilitate secure communication between two parties according to RFC 7519
+            
+            * another authorization strategy is session token 
+            
+            * authorization techniques were invented due to stateless behaviour of http protocol
+                but for a dynamic website you have to provide user with different resources according to 
+                their request and authority 
+            
+            * best suited for microservice architecture application
+            
+            * json object is encrypted with base64 encoding and signed by the server with a secret key 
+                header.payload.signature; each segment is a json object
+                
+            * the jwt token is encrypted not for security but for easy usability, the payload data can easily 
+                be decoded in any online cryptography service, so do not store sensitive information in jwt token
+                instead only store user role name and such
+
+            * jwt token - user identity 
+
+            * jwt token can not be invalidated unless it expires or blacklisted 
+
+            
+            * how to implement jwt for authorization in express 
+                1. verify username and password 
+                    const user = await User.find({ username: req.body.username });
+                    if (user && user.length > 0) {
+                        const isValidPassword = await bcrypt.compare(req.body.password, user[0].password);
+                        if (!isValidPassword)
+                            res.status(401).json({ error: `authentication failed` });
+                    
+                2. generate token
+                        const token = jwt.sign({username: user[0].username, userId: user[0]._id, }, process.env.JWT_SECRET, {
+                            expiresIn: '1h', 
+                        }); 
+                    
+                        res.status(200).json({
+                            access_token: token,
+                            message: 'login successful !'
+                        });
+                    
+                    }
+
+                3. set jwt token with request ( standard is to send it in header )
+                    Authorization: Bearer jwt_token
+
+                4. receive token, verify signature and retrieve user details 
+                    const jwt = require('jsonwebtoken');
+
+                    const checkLogin = (req, res, next) => {
+                        try{
+                            const { authorization } = req.headers;
+                            const token = authorization.split(" ")[1];
+                            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                            const {username, userId} = decoded;
+                            req.username = username;
+                            req.userId = userId;
+                            next();
+                    
+                        }catch (err){
+                            next(new Error("Authentication failure"));
+                        }
+                    };
+                    
+                    module.exports = checkLogin; 
+
+                5. use the authoriztion function as middleware in any route that requires authorization
+                    router.get('/', checkLogin, async (req, res) => {});
+
+        <h2>Application requirement analysis and development</h2>
+            1. user interface / wireframing 
+            
+
+        <h2>MongoDB</h2>
+            * Non Relational Database Management System 
+            * query language used is NoSQL
+            * tables are called collection, rows are called documents, columns are called fields;
+            * from mongo shell => 
+            <h3>mongosh</h3>
+                1. show dbs => shows databases provided that they are not empty;
+
+                2. use db_name => creates datase;
+
+                3. db => returns database name; 
+
+                4. db.products.insertOne({
+                        name: 'iPhone 10', 
+                        price: 100000, 
+                        category: 'smartphone', 
+                        active: 'true'
+                    });
+                    => create 'products' collection and insert one record/document 
+
+                5. return all documents from a collection 
+                    db.collectionName.find()
+                    to prettify, db.collectionName.find().pretty();
+
+                6. insert multiple documents at once
+                db.products.insertMany(
+                        [
+                            {
+                                name: 'hp pavillion', 
+                                price: 150000, 
+                                category: 'laptop',
+                                active: true 
+                            }, 
+                        
+                            {
+                                name: 'honda civic', 
+                                price: 1500000, 
+                                category: 'car',
+                                active: true
+                            }, 
+                        
+                            {
+                                name: 'iPhone 14', 
+                                price: 150000, 
+                                category: 'smartphone',
+                                active: true
+                            }
+                        ]
+                    );
+                    
+
+                7. get a document by query parameter, 
+                    db.products.find({active: true, category: 'laptop'});
+
+                8. get columns/fields that you want by projection, 
+                    db.products.find({active: true, category: 'laptop'}, {active: 0, category: 0});
+                    => fields which value is 0 will not be present in the returned document 
+
+                9. get the first record 
+                    db.products.find({category: 'smartphone'}).limit(1);
+                    or, 
+                    db.products.findOne({category: 'smartphone'});
+
+                10. get the second record
+                    db.products.find({category: 'smartphone'}).limit(1).skip(1);
+
+                11. updateOne 
+                    db.products.updateOne({name: 'iPhone', active: true}, {$set: {price: 80000}});
+
+                12. updateMany 
+                    db.products.updateMany({}, {$set: {active: true}});
+                
+                13. delete one
+                    db.products.deleteOne({name: 'iPhone'});
+
+                14. delete many
+                    db.products.deleteMany({}); => deletes all 
+                    db.products.deleteMany({category: 'smartphone'}); => deletes all records of smartphone category
+
+
+            <h3>Mongoose</h3>
+                * is an ODM (Object Data Modeling) Library
+                * will be used to connect to mongodb databse and different databse operation 
+                * Models mongodb records/data as JavaScript Object
+                * Mongoose fascilitates relation between NoSQL database records 
+                * Provides schema validation, mongodb does not prohibit you from inserting asymmetric data into 
+                    collections where mongoose will help us validate data symmetry before insertion.  
+                
+                * connect mongoose to mongodb databse, 
+                    mongoose.connect('mongodb://127.0.0.1/todos').then(()=>{
+                        console.log("connection successful");
+                    }).catch((err)=>{
+                        console.log(err);
+                    });
+                    
+                    ** mongoose by default tries to connect to ipv6 address you need to specify ipv4 address 
+                        by '127.0.0.1' instead of using 'localhost'
+
+                mongoose crud: 
+                    1. create a schema 
+                        const mongoose = require('mongoose');
+
+                        const todoSchema = mongoose.Schema({
+                            title: {
+                                type: String, 
+                                required: true, 
+                            }, 
+                            description: String, 
+                            status: {
+                                type: String, 
+                                enum: ['active', 'inactive'],
+                            }, 
+                            date: {
+                                type: Date, 
+                                default: Date.now(),
+                            }, 
+                        });
+
+                    2. create a model from a schema 
+                        const Todo = mongoose.model("Todo", todoSchema);
+
+                    3. to create a new record make an instance of the model and call save on it 
+                        const newTodo = new Todo(req.body);
+                        try {
+                            await newTodo.save();
+                            res.status(200).json({ message: 'Todo was created successfully !' });
+                        
+                            } catch (err) {
+                            res.status(500).json({ message: 'There was a server side error !' });
+                        }
+
+                    4. use model.insertMany([{}, {}, {}]) to insert multiple records at once 
+
+                    5. use model.updateOne({filter: value}, {$set: {property: value}}) 
+                        to update a single record filtered by filter: value 
+
+                    6. if you need updated record on successful update use findeOneAndUpdate()
+                        let doc = await Character.findOneAndUpdate(filter, update); // not complete
+
+                    7. delete a record/document 
+                        await Todo.deleteOne({ _id: req.params.id });
+
+                    8. get a record by query parameters 
+                        const todo = await Todo.find({ _id: req.params.id }, { __v: 0 });
+                        
+                    9. or get all records from a collection 
+                    const todos = await Todo.find();
+
+                
+            <h3>Mongoose instance methods, static and query helpers</h3>
+                * add instance methods 
+                    todoSchema.methods = {
+                        findActive: () => {
+                            return mongoose.model("Todo").find({status: 'active'});
+                        }
+                    };
+
+                * use instance methods 
+                    const todoModelObj = new Todo();
+                    const todos = await todoModelObj.findActive();
+
+
+                * static methods
+                    todoSchema.statics = {
+                        findByJS: function () {
+                            return this.find({title: /js/i});
+                        }
+                    };
+
+                * use static method
+                    const todos = await Todo.findByJS();
+
+                * query helper 
+                    todoSchema.statics = {
+                        byLanguage: function (language) {
+                            return this.find({title: new RegExp(language, 'i')});
+                        }
+                    };
+
+                * use query helpers
+                    const todos = await Todo.find().byLanguage("js");
+
+            <h3>Populate relation data</h3>
+                * to add one to one relationship from todo collection to user collection, add a column named user
+                    user: {
+                        type: mongoose.Types.ObjectId, 
+                        ref: "User"
+                    }
+
+                    populate user column with the userId, 
+                        user: userId, 
+
+                retrive data from one to one relationship 
+                    const todos = await Todo.find({ status: 'active' }, { __v: 0 }).populate('user', 'name username -_id');
+
+
+                * to add one to many relation from user to todos, add a column named todos
+                    todos: [{
+                        type: mongoose.Types.ObjectId, 
+                        ref: 'Todo'
+                    }]
+
+                    update user collection's todos field/column (which is an array) when a user creates a new todo, 
+                        const newTodoRes = await newTodo.save();
+                        await User.updateOne({_id: userId}, {$push:{todos: newTodoRes._id}});
+
+                    retrive todos data from one to many relation when retriving data for an user, 
+                        const allUsers = await User.find().populate("todos");
+
+        </pre>
+    </main>
+</body>
+
+</html>
