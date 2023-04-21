@@ -661,7 +661,14 @@
 
         <h2>Application requirement analysis and development</h2>
             1. user interface / wireframing 
+            2. express validator 
+                    const {check} = requrie('express-validator');
+                    app.post('/', [
+                        check("name").isLength({min: 1}).withMessage("name is required"), 
+                        check("email").isEmail()
+                    ], signUpController); 
             
+            3. 
 
         <h2>MongoDB</h2>
             * Non Relational Database Management System 
