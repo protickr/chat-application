@@ -1,6 +1,6 @@
 // inbox page
 const getInbox = function (req, res, next) {
-    res.render('inbox', {});
+    res.render('inbox', {data: []});
 };
 
 module.exports = { getInbox };
