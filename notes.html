@@ -661,6 +661,7 @@
 
         <h2>Application requirement analysis and development</h2>
             1. user interface / wireframing 
+
             2. express validator 
                     const {check} = requrie('express-validator');
                     app.post('/', [
@@ -668,7 +669,25 @@
                         check("email").isEmail()
                     ], signUpController); 
             
-            3. 
+            3. after validator chain, pass in another middleware which will handle errors if any, 
+                const addUserValidationHandler = function (req, res, next){
+                    const errors = validationResult(req);
+                    const mappedErrors = errors.mapped();
+                    if(Object.keys(mappedErrors).length === 0){
+                        next()
+                    }else{
+                        if(req.files.length > 0){
+                            const { fileName } = req.files[0]; 
+                            unlink(path.join(__dirname, `/../public/uploads/avatars/${fileName}`), (err)=>{
+                                if(err)
+                                    console.log(err);
+                            });
+                        }
+                        res.status(500).json({errors: mappedErrors});
+                    }
+                };
+
+            4. 
 
         <h2>MongoDB</h2>
             * Non Relational Database Management System 
@@ -817,6 +836,53 @@
                         
                     9. or get all records from a collection 
                     const todos = await Todo.find();
+
+                    10. mongoose model properties can also store multiple fields grouped as an object 
+                        const mongoose = require('mongoose');
+
+                        const conversationSchema = mongoose.Schema(
+                            {
+                                creator: {
+                                    id: mongoose.Types.ObjectId, 
+                                    name: String, 
+                                    avatar: String,
+                                }, 
+                                participant: {
+                                    id: mongoose.Types.ObjectId, 
+                                    name: String, 
+                                    avatar: String,
+                                }, 
+                                last_updated: {
+                                    type: Date, 
+                                    default: Date.now, 
+                                },
+                            }, 
+                            {
+                                timestamps: true,
+                            }
+                        );
+                        
+                        const Conversation = mongoose.model('Conversation', conversationSchema);
+                        
+                        module.exports = Conversation;
+                    
+                    11. to use previous kind of model, to store,                             
+                        const newConversation = new Conversation({
+                            creator: {
+                            id: req.user.userid,
+                            name: req.user.username,
+                            avatar: req.user.avatar || null,
+                            },
+
+                            participant: {
+                            name: req.body.participant,
+                            id: req.body.id,
+                            avatar: req.body.avatar || null,
+                            },
+                        });
+                        const result = await newConversation.save();
+
+                        
 
                 
             <h3>Mongoose instance methods, static and query helpers</h3>
